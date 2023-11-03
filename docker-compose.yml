@@ -1,0 +1,86 @@
+version: "3.3"
+
+services:
+
+  postgres:
+    image: postgres:13.0-alpine
+    environment:
+      POSTGRES_USER: cgtest
+      POSTGRES_PASSWORD: cgtest
+    ports:
+      - '5432:5432'
+    volumes:
+      - cgtest_v-postgres:/var/lib/postgresql/data
+
+  # redis:
+  #   image: redis:7.0
+  #   networks:
+  #     - cgtest_v-network
+  #   ports:
+  #     - '6379:6379'
+  #   volumes:
+      # - cgtest_v-redis:/var/lib/redis/data
+
+  # redis:
+  #   image: redis:6.2.6
+  #   # networks:
+  #   #   - cgtest_v-network
+  #   command: redis-server /usr/local/etc/redis/redis.conf
+  #   ports:
+  #     - '6379:6379'
+  #   volumes:
+  #     - ./redis.conf:/usr/local/etc/redis/redis.conf
+  #     - cgtest_v-redis:/var/lib/redis/data
+
+  web:
+    build:
+      context: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+    depends_on:
+      - elasticsearch
+      - postgres
+    env_file:
+      - .env
+  # backend:
+  #   build:
+  #     context: ./backend
+  #   volumes:
+  #     - ./backend:/cgtest_v/backend
+  #   links:
+  #     - postgres
+  #     - redis
+  #   ports:
+  #     - '3000:3000'
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     - elasticsearch
+  #     - postgres
+  #     - redis
+
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.8.17
+    environment:
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+      - xpack.monitoring.enabled=false
+      - xpack.graph.enabled=false
+      - xpack.watcher.enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ./docker_data/elasticsearch/data:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+
+volumes:
+  cgtest_v-postgres:
+  cgtest_v-redis:
